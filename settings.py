@@ -15,8 +15,8 @@ class Style(Enum):
 
 
 class Sizes(Enum):
-    CELL_SIZE = (40, 40)
     RADIO_BUTTON_RADIUS = 10
+    CELL_SIZE = (40, 40)
     EASY_BOARD_SIZE = (8, 8)
     MEDIUM_BOARD_SIZE = (12, 12)
     HARD_BOARD_SIZE = (15, 15)

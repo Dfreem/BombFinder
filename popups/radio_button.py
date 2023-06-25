@@ -12,6 +12,12 @@ class RadioButton:
         self.font = pygame.font.Font(font_path, 18)
 
     def draw(self):
+        """
+        Draw the radio button on the parent window. Should be called inside the game-loop before updating the display
+
+        :return: a :class:`pygame.rect.Rect` representing the location and area of the button.
+        """
+
         button = pygame.draw.circle(self.parent_window,
                                     "black",
                                     self.location,

@@ -6,11 +6,28 @@ from typing import List
 from cell import Cell
 
 
-class GameBoard:
+def get_adjacent_mines(cell: Cell):
+    """
+    set the indicated cells value to the number of immidiatly adjacent mines touching it.
+
+    :param cell: The cell to start with, the cell we want to check surroundings of.
+    :return: None
+    """
+
+    if cell.value == settings.MINE:
+        return
+    num_mines = 0
+    for neighbor in cell.neighbors:
+        if neighbor.value == settings.MINE:
+            num_mines += 1
+    cell.value = num_mines
+
+
+class BombField:
 
     def __init__(self, board_size: Tuple[int, int], window, num_mines=-1):
         """
-        the minefield
+        A call to BombField's :method:`draw()` method should happen once a frame.
 
         :type window: pygame.Surface
         :param window: the main game window
@@ -33,10 +50,16 @@ class GameBoard:
         '''a 2-d matrix of :class:`Cell`'s representing the game board'''
         # endregion
 
-        self.build()
-        # self.traverse(print)
+        self._build()
 
-    def build(self):
+    def _build(self):
+        """
+        Fill the game board with with the specified number of mines in settings.py.
+
+        :return: None
+        """
+
+        # use two instances of random because it makes me feel better
         rand = Random()
         dom = Random()
         mines_left = self.num_mines
@@ -47,14 +70,12 @@ class GameBoard:
             col = dom.randint(0, len(self.cells[0]) - 1)
             self.cells[row][col].value = settings.MINE
             mines_left -= 1
+
         for row in self.cells:
             for cell in row:
                 if cell.value != -1:
                     cell.get_neighbors(self.cells)
-                    for neighbor in cell.neighbors:
-                        if neighbor.value == -1:
-                            cell.value += 1
-                    print(cell.value)
+                    get_adjacent_mines(cell)
 
     def draw(self):
         """
@@ -93,35 +114,42 @@ class GameBoard:
 
     def handle_click(self, buttons: Tuple[bool, bool, bool], pos: Tuple[int, int]):
         """
-        handler method called when any mouse button is clicked. On normal click, calls to calculate value of cell
+        Process the location and which mouse button (left, middle, right) was pressed when a mouse click happens
 
-        :param buttons: a tuple of boolean values indicating which mouse buttons where clicked. 0=left, 1=middle,
-        2=right
+        :param buttons: a tuple of boolean values indicating which mouse buttons where clicked
         :param pos: the position on screen that was clicked, (x, y)
         :return: the cell that was clicked or None
         """
+
+        # normal left mouse click to reveal a cell
         if buttons[0]:
             col, row = pos[0] // settings.Sizes.CELL_SIZE.value[0] - 1, pos[1] // settings.Sizes.CELL_SIZE.value[1] - 1
             cell = self.cells[row][col]
+
+            # ignore cells that have bean dealt with
             if not cell.was_clicked and not cell.is_flagged:
+
+                # refresh cell value then reveal
+                # self.get_adjacent_mines(cell)
                 cell.clicked()
-                self.get_adjacent_mines(cell)
                 if cell.value > 0:
                     self.draw()
                 elif cell.value == 0:
-                    cell.get_neighbors(self.cells)
                     self.find_zeroes(cell)
-                elif cell.value == -1:
+                elif cell.value == settings.MINE:
                     self.reveal_mines()
                 return cell
 
+        # mouse_button[2] == right mouse. Flag the cell as possible bomb.
         elif buttons[2]:
             x, y = pos
             col, row = x // settings.Sizes.CELL_SIZE.value[0] - 1, y // settings.Sizes.CELL_SIZE.value[1] - 1
             current = self.cells[row][col]
-            print("before", current.is_flagged)
+
+            # toggle flagged ivar, changes color
             current.is_flagged = not current.is_flagged
-            print("after", current.is_flagged)
+
+            # mine counter tracking
             if current.is_flagged:
                 self.num_mines -= 1
             elif not current.is_flagged:
@@ -130,25 +158,15 @@ class GameBoard:
         return None
 
     def clear_visited(self):
-        for row in self.cells:
-            for cell in row:
-                cell.visited = False
-
-    def get_adjacent_mines(self, cell: Cell):
         """
-        set the indicated cells value to the number of immidiatly adjacent mines touching it.
+        Reset all the cells visited value to false.
 
-        :param cell: The cell to start with, the cell we want to check surroundings of.
         :return: None
         """
 
-        if cell.value == settings.MINE:
-            return
-        cell.get_neighbors(self.cells)
-        cell.value = 0
-        for neighbor in cell.neighbors:
-            if neighbor.value == settings.MINE:
-                cell.value += 1
+        for row in self.cells:
+            for cell in row:
+                cell.visited = False
 
     def reveal_mines(self):
         """
@@ -177,7 +195,7 @@ class GameBoard:
         """
 
         neighbors = cell.neighbors
-        self.clear_visited()
+        # self.clear_visited()
         self._find_zeroes_rec(neighbors)
 
     def _find_zeroes_rec(self, neighbors) -> None:
@@ -192,20 +210,21 @@ class GameBoard:
 
         if len(neighbors) > 0:
             current = neighbors.pop(0)
+            # refresh the current cells neighbor list
+            # current.get_neighbors(self.cells)
 
             #  if we haven't checked this cell already, mark it as visited, refresh it's neighbors list, then search
             #  the list for zeroes.
             if not current.visited and not current.was_clicked:
+
                 current.visited = True
-                current.get_neighbors(self.cells)
-                for cell in current.neighbors:
-                    if cell.value == 0:
-                        neighbors.append(cell)
-                        neighbors.extend(cell.neighbors)
-                        cell.clicked()
-                    else:
-                        for neighbor in cell.neighbors:
-                            if neighbor.value == 0:
-                                neighbor.clicked()
-                return self._find_zeroes_rec(neighbors)
+                for neighbor in current.neighbors:
+                    if neighbor.value == 0:
+                        neighbor.clicked()
+                        for cell in neighbor.neighbors:
+                            print(f"parent: {current.value}\n    neighbor: {cell.value} @ {cell.location}")
+                            cell.clicked()
+                        neighbors.extend(neighbor.neighbors)
+
+            return self._find_zeroes_rec(neighbors)
         return None

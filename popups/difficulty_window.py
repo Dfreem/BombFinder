@@ -10,21 +10,18 @@ font.init()
 UNIT_X = Placement.POPUP_GRID_UNIT_X.value
 UNIT_Y = Placement.POPUP_GRID_UNIT_Y.value
 RADIUS = Sizes.RADIO_BUTTON_RADIUS.value
-EASY = Difficulty.EASY.value
-MEDIUM = Difficulty.MEDIUM.value
-HARD = Difficulty.HARD.value
 
 
 class DifficultyPopup(Popup):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, text: str):
+        super().__init__(text)
 
     def create_buttons(self):
 
-        easy = RadioButton(self.window, "easy", (UNIT_X * 3, UNIT_Y * 3))
-        medium = RadioButton(self.window, "medium", (UNIT_X * 6, UNIT_Y * 3))
-        hard = RadioButton(self.window, "hard", (UNIT_X * 9, UNIT_Y * 3))
+        easy = RadioButton(self.window, "EASY", (UNIT_X * 3, UNIT_Y * 6))
+        medium = RadioButton(self.window, "MEDIUM", (UNIT_X * 6, UNIT_Y * 6))
+        hard = RadioButton(self.window, "HARD", (UNIT_X * 9, UNIT_Y * 6))
 
         self.buttons.append(easy)
         self.buttons.append(medium)
@@ -36,17 +33,8 @@ class DifficultyPopup(Popup):
             button_y = button.location[1]
             if button_y - RADIUS < pos[1] < button_y + RADIUS:
                 if button_x - RADIUS < pos[0] < button_x + RADIUS:
-                    if button.value == "easy":
-                        return EASY
-                    elif button.value == "medium":
-                        return MEDIUM
-                    elif button.value == "hard":
-                        return HARD
-        return -1
+                    print(f"handle_click in difficulty: {button.value}")
+                    return button.value
 
-    def draw(self):
-        super().draw()
-        font_path = font.match_font(settings.Style.FONT_NAME.value)
-        nova_font = font.Font(font_path)
-        text = nova_font.render("Choose Your Difficulty", True, settings.Style.POPUP_FONT_COLOR.value)
-        _ = self.window.blit(text, ((UNIT_X * 6) - (text.get_width() // 2), (UNIT_Y * 2)))
+    def run(self):
+        return super().run()

@@ -1,9 +1,10 @@
 # region imports
+from typing import List
 import pygame
 import settings
 from popups.play_again import PlayAgainPopup
 from popups.difficulty_window import DifficultyPopup
-from settings import Difficulty, Placement, Style, Sizes
+from settings import Difficulty, Placement, Style
 from cell import Cell
 from game_board import BombField
 # endregion
@@ -11,79 +12,132 @@ from game_board import BombField
 pygame.init()
 pygame.font.init()
 
-# region Magic numbers from settings.py
-EASY = Difficulty.EASY.value
-MEDIUM = Difficulty.MEDIUM.value
-HARD = Difficulty.HARD.value
-EASY_BOARD_SIZE = EASY_WIDTH, EASY_HEIGHT = Sizes.EASY_BOARD_SIZE.value
-MEDIUM_BOARD_SIZE = MEDIUM_WIDTH, MEDIUM_HEIGHT = Sizes.MEDIUM_BOARD_SIZE.value
-HARD_BOARD_SIZE = HARD_WIDTH, HARD_HEIGHT = Sizes.HARD_BOARD_SIZE.value
+UNIT_X: int = Placement.POPUP_GRID_UNIT_X.value
 
-CELL_SIZE = Sizes.CELL_SIZE.value
-MARGIN = Placement.MARGIN_OFFSET.value
-BOARD_COLOR = Style.BOARD_COLOR.value
-# endregion
+UNIT_Y: int = Placement.POPUP_GRID_UNIT_Y.value
+
+BOARD_COLOR: str = Style.BOARD_COLOR.value
+
+
+def not_a_winner(field: BombField, correct: int):
+    result_popup(field, f"Not all bombs \nhave been flagged\ncorrect: {correct}")
+    field.num_mines = field.start_mines - correct
+    for row in field.cells:
+        for cell in row:
+            if cell.is_flagged and cell.value != -1:
+                cell.is_flagged = False
+    pygame.display.flip()
+    pygame.time.wait(3000)
+
+
+def result_popup(field: BombField, result: str):
+    screen = field.parent_window
+    rect_placement = ((screen.get_width() // 2) - 100,
+                      (screen.get_height() // 2) - 75)
+    rect_size = (screen.get_width() * .4,
+                 screen.get_height() * .5)
+    pygame.draw.rect(screen, settings.Style.POPUP_BG_COLOR.value,
+                     (rect_placement, rect_size))
+    text_writer = pygame.font.Font(
+        pygame.font.match_font(settings.Style.FONT_NAME.value),
+        18)
+    rendered_text = text_writer.render(result, True, settings.Style.POPUP_FONT_COLOR.value)
+    screen.blit(rendered_text, ((UNIT_X * 6) - (rendered_text.get_width() // 2),
+                                (UNIT_Y * 5) - (rendered_text.get_height() // 2)))
+
+
+def check_if_winner(board: BombField):
+    correct = 0
+    for row in board.cells:
+        for cell in row:
+            if cell.is_flagged:
+                if cell.value == settings.MINE:
+                    correct += 1
+    return correct
+
+
+def get_board_size(difficulty: str | None):
+    if difficulty is None:
+        return -1
+    size: settings.Sizes = eval(f"settings.Sizes.{difficulty}_BOARD_SIZE")
+    return size.value
+
+
+def get_number_of_mines(difficulty: str | None):
+    if settings.DEBUG:
+        return 1
+    if difficulty is None:
+        return -1
+    new_difficulty: Difficulty = eval(f"settings.Difficulty.{difficulty}")
+    percentage = 0.15 + (0.01 * new_difficulty.value)
+    return int(eval(f"settings.Sizes.{difficulty}_BOARD_SIZE.value ** 2 * {percentage}"))
+
+
+def get_screen_size(difficulty: str | None):
+    if difficulty is None:
+        return -1
+    width: settings.Sizes = eval(f"settings.Sizes.{difficulty}_BOARD_SIZE")
+    cell_size = settings.Sizes.CELL_SIZE.value
+    margin = settings.Placement.MARGIN_WIDTH.value
+    side_length = width.value * cell_size + margin
+    return side_length, side_length
+
 
 
 def main():
 
     # Ask the player what difficulty they would like to play on.
-    popup = DifficultyPopup()
+    popup = DifficultyPopup("Choose your difficulty")
     popup.create_buttons()
     difficulty = popup.run()
+    # print(f"difficulty from main: {difficulty}")
 
-    # to change difficulty values, see settings.py
-    # region Get Difficulty
-    if difficulty == EASY:
-        window_size = (EASY_WIDTH * CELL_SIZE[0] + MARGIN,
-                       EASY_HEIGHT * CELL_SIZE[1] + MARGIN)
-        board_size = EASY_BOARD_SIZE
-        num_mines = Difficulty.EASY_MINES.value
-
-    elif difficulty == MEDIUM:
-        window_size = (MEDIUM_WIDTH * CELL_SIZE[0] + MARGIN,
-                       MEDIUM_HEIGHT * CELL_SIZE[1] + MARGIN)
-        board_size = MEDIUM_BOARD_SIZE
-        num_mines = Difficulty.MED_MINES.value
-
-    else:
-        window_size = (HARD_WIDTH * CELL_SIZE[0] + MARGIN,
-                       HARD_HEIGHT * CELL_SIZE[1] + MARGIN)
-        board_size = HARD_BOARD_SIZE
-        num_mines = Difficulty.HARD_MINES.value
-    # endregion
-
+    # difficulty dependent settings
+    board_size = get_board_size(difficulty)
+    window_size = get_screen_size(difficulty)
+    num_mines = get_number_of_mines(difficulty)
     # Main game loop prep
     screen = pygame.display.set_mode(window_size)
     board = BombField(board_size, screen, num_mines=num_mines)
     clock = pygame.time.Clock()
-    running = True
 
-    # Main game loop. Popups handle their own loop via their overloaded run() method.
-    while running:
+    def main_loop():
+        running = True
+        while board.num_mines > 0 and running:
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-                quit()
-
-            # all mouse clicks are sent to game-board to be handled.
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                clicked_cell: Cell | None = board.handle_click(pygame.mouse.get_pressed(3), pygame.mouse.get_pos())
-                if clicked_cell is not None and clicked_cell.value == -1:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
                     running = False
-                    pygame.time.wait(3000)
+                    quit()
 
-        # clear and redraw the board once per frame. GameBoard.draw() calls each cells draw() method.
-        screen.fill(settings.Style.BOARD_COLOR.value)
-        board.draw()
-        _ = clock.tick(60) / 1000
+                # all mouse clicks are sent to game-board to be handled.
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    clicked_cell: Cell | None = board.handle_click(pygame.mouse.get_pressed(3), pygame.mouse.get_pos())
+                    if clicked_cell is not None and clicked_cell.value == -1:
+                        running = False
+                        pygame.time.wait(3000)
+
+            # clear and redraw the board once per frame. GameBoard.draw() calls each cells draw() method.
+            screen.fill(settings.Style.BOARD_COLOR.value)
+            board.draw()
+            _ = clock.tick(60) / 1000
+        return board
+
+    board = main_loop()
+    if board.num_mines == 0:
+        is_winner = check_if_winner(board)
+        if is_winner == 0:
+            board.reveal_mines()
+            result_popup(board, "YOU WIN!!!")
+        else:
+            not_a_winner(board, is_winner)
+            main_loop()
 
     # close current pygame display before opening a popup window
     pygame.display.quit()
 
     # send control to the PlayAgain popup.
-    play_again = PlayAgainPopup()
+    play_again = PlayAgainPopup("Would you like to play again?")
     play_again.create_buttons()
     again = play_again.run()
 

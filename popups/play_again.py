@@ -17,8 +17,8 @@ font.init()
 
 
 class PlayAgainPopup(Popup):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, text):
+        super().__init__(text)
 
     def create_buttons(self):
 
@@ -29,8 +29,8 @@ class PlayAgainPopup(Popup):
         self.buttons.append(no)
 
     def handle_click(self, pos):
-        y_offset = (CELL_SIZE[1] // 2)
-        x_offset = (CELL_SIZE[0] // 2)
+        y_offset = (CELL_SIZE // 2)
+        x_offset = (CELL_SIZE // 2)
         button_y = self.buttons[0].location[1]
         low_y = button_y - y_offset
         high_y = button_y + y_offset
@@ -43,32 +43,32 @@ class PlayAgainPopup(Popup):
                 if in_range_x:
                     return button
 
-    def draw(self):
-        font_path = font.match_font(FONT_NAME)
-        nova_font = font.Font(font_path, 18)
-        title = nova_font.render("Would you like to play again?", True, FONT_COLOR)
-        text_x = UNIT_X * 6 - title.get_width() // 2
-        text_y = UNIT_Y * 2
-        square = self.window.blit(title, (text_x, text_y))
-        super().draw()
-        pygame.display.update(square)
+    # def draw(self):
+    #     font_path = font.match_font(FONT_NAME)
+    #     nova_font = font.Font(font_path, 18)
+    #     title = nova_font.render(self.text, True, FONT_COLOR)
+    #     text_x = UNIT_X * 6 - title.get_width() // 2
+    #     text_y = UNIT_Y * 2
+    #     square = self.window.blit(title, (text_x, text_y))
+    #     super().draw()
+    #     pygame.display.update(square)
 
-    def run(self):
-        clock = pygame.time.Clock()
-        chosen = False
-        choice = None
-        while not chosen:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    difficulty = 0
-                    return difficulty
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    if pygame.mouse.get_pressed(3)[0]:
-                        choice = self.handle_click(pygame.mouse.get_pos())
-                        if choice is not None:
-                            chosen = True
-            self.draw()
-            _ = clock.tick(60) / 1000
-        pygame.display.quit()
-        return choice
+    # def run(self):
+    #     clock = pygame.time.Clock()
+    #     chosen = False
+    #     choice = None
+    #     while not chosen:
+    #         for event in pygame.event.get():
+    #             if event.type == pygame.QUIT:
+    #                 pygame.quit()
+    #                 difficulty = 0
+    #                 return difficulty
+    #             elif event.type == pygame.MOUSEBUTTONDOWN:
+    #                 if pygame.mouse.get_pressed(3)[0]:
+    #                     choice = self.handle_click(pygame.mouse.get_pos())
+    #                     if choice is not None:
+    #                         chosen = True
+    #         self.draw()
+    #         _ = clock.tick(60) / 1000
+    #     pygame.display.quit()
+    #     return choice

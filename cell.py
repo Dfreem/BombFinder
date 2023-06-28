@@ -6,11 +6,13 @@ import settings
 class Cell:
     def __init__(self, window: pygame.Surface, grid_index: Tuple[int, int], value=0):
 
-        self.size = (self.width, self.height) = settings.Sizes.CELL_SIZE.value
-        self.surf = pygame.Surface(self.size)
+        self.name: str
+        self.id: int
+        self.size = settings.Sizes.CELL_SIZE.value
+        self.surf = pygame.Surface((self.size, self.size))
         self.grid_index = self.col, self.row = grid_index
-        self.location = (self.x, self.y) = (self.col * self.width + settings.Placement.MARGIN_OFFSET.value // 2,
-                                            self.row * self.height + settings.Placement.MARGIN_OFFSET.value // 2)
+        self.location = (self.x, self.y) = (self.col * self.size + settings.Placement.MARGIN_WIDTH.value // 2,
+                                            self.row * self.size + settings.Placement.MARGIN_WIDTH.value // 2)
         self.is_flagged = False
         self.was_clicked = False
         self.value = 0 if value is None else value
@@ -30,13 +32,13 @@ class Cell:
         outline = pygame.draw.rect(self.surf, "#222222", self.surf.get_rect(), width=1)
         self.parent_window.blit(self.surf, ((self.x,
                                              self.y),
-                                            self.size))
+                                            (self.size, self.size)))
         if self.was_clicked and self.value > -1:
             cell_number = font.render(f"{self.value}", True, settings.Style.CELL_FONT_COLOR.value)
-            self.parent_window.blit(cell_number, (self.x + (self.width // 3),
-                                                  self.y + (self.height // 4),
-                                                  self.width,
-                                                  self.height))
+            self.parent_window.blit(cell_number, (self.x + (self.size // 3),
+                                                  self.y + (self.size // 4),
+                                                  self.size,
+                                                  self.size))
         return outline
 
     def get_neighbors(self, board):

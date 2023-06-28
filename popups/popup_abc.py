@@ -1,12 +1,17 @@
 from typing import List
 import pygame
+from pygame import font
 from abc import ABCMeta, abstractmethod
+
+import settings
 from settings import Placement, Style, Sizes
 from popups.radio_button import RadioButton
 
 
 SCREEN_SIZE = Sizes.POPUP_SCREEN_SIZE.value
 BG_COLOR = Style.POPUP_BG_COLOR.value
+UNIT_X = Placement.POPUP_GRID_UNIT_X.value
+UNIT_Y = Placement.POPUP_GRID_UNIT_Y.value
 
 
 class Popup(metaclass=ABCMeta):
@@ -20,8 +25,10 @@ class Popup(metaclass=ABCMeta):
 
     """
 
-    def __init__(self):
+    def __init__(self, display_text: str | None, font_size=16):
         self.buttons = []
+        self.text = display_text
+        self.font_size = font_size
         self.window = pygame.display.set_mode(SCREEN_SIZE)
 
     @abstractmethod
@@ -41,28 +48,39 @@ class Popup(metaclass=ABCMeta):
         self.window.fill(BG_COLOR)
         for button in self.buttons:
             _ = button.draw()
+        if self.text is not None:
+            font_path = font.match_font(Style.FONT_NAME.value)
+            nova_font = font.Font(font_path, 18)
+            title = nova_font.render(self.text, True, Style.POPUP_FONT_COLOR.value)
+            text_x = UNIT_X * 6 - title.get_width() // 2
+            text_y = UNIT_Y * 2
+            _ = self.window.blit(title, (text_x, text_y))
         pygame.display.flip()
 
     def run(self):
         """Initiate the event loop for this pop window. returns the chosen option on exit.
 
-        :returns: an int indicating the button option that was chosen chose.
+        :returns: an Enum indicating the button option that was chosen.
         """
-        difficulty = -1
+
         clock = pygame.time.Clock()
-        while difficulty < 0:
-            self.draw()
+        chosen = False
+        choice = None
+        while not chosen:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
-                    difficulty = 0
-                    return difficulty
+                    chosen = True
+                    return choice
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if pygame.mouse.get_pressed(3)[0]:
-                        difficulty = self.handle_click(pygame.mouse.get_pos())
+                        choice = self.handle_click(pygame.mouse.get_pos())
+                        if choice is not None:
+                            chosen = True
+                self.draw()
             _ = clock.tick(60) / 1000
         pygame.display.quit()
-        return difficulty
+        return choice
 
     @abstractmethod
     def handle_click(self, pos):
